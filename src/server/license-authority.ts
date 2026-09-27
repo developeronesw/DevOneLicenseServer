@@ -60,6 +60,12 @@ export class LicenseAuthority {
     // The cleartext key is returned once and is never persisted.
     return {ok:true,data:{licenseId:id,licenseKey:key,issuedAt,expiresAt}};
   }
+  private async entitlement(record: LicenseRecord): Promise<NetworkEntitlement> {
+    const unsigned={licenseId:record.licenseId,product:"devone-cms" as const,edition:"network" as const,maxSites:null,features:FEATURES,issuedAt:record.issuedAt,expiresAt:record.expiresAt,term:record.term};
+    const bytes=await crypto.subtle.sign({name:"Ed25519"},this.signingPrivateKey,encoder.encode(JSON.stringify(unsigned)));
+    return {...unsigned,signature:base64(new Uint8Array(bytes))};
+  }
+
   async activate(licenseKey:string, installationId:string): Promise<AuthorityResult<NetworkEntitlement>> {
     if (typeof licenseKey!=="string" || !/^D1N-[A-Za-z0-9_-]{40,60}$/.test(licenseKey) || typeof installationId!=="string" || !/^[A-Za-z0-9_-]{16,128}$/.test(installationId)) {
       return {ok:false,status:400,code:"invalid_activation"};
