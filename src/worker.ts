@@ -25,7 +25,7 @@ async function body(request:Request):Promise<Record<string,unknown>|null>{
  const text=await request.text(); if(text.length>8192)return null;
  try{const parsed:unknown=JSON.parse(text);return parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed as Record<string,unknown>:null;}catch{return null;}
 }
-function bytesFromBase64(value:string):Uint8Array { return Uint8Array.from(atob(value), c=>c.charCodeAt(0)); }
+function bytesFromBase64(value:string):Uint8Array { const raw=Uint8Array.from(atob(value), c=>c.charCodeAt(0)); return new Uint8Array(raw); }
 async function signingKey(value:string):Promise<CryptoKey>{
  return crypto.subtle.importKey("pkcs8",bytesFromBase64(value),{name:"Ed25519"},false,["sign"]);
 }
