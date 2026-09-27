@@ -8,10 +8,23 @@ class FakeDb implements LicenseDatabase {
   rows = new Map<string, LicenseRecord>();
   async first<T>(query: string, ...params: unknown[]): Promise<T | null> {
     const value = String(params[0] ?? "");
-    if (query.includes("key_hash")) {
-      return ([...this.rows.values()].find(r => r.keyHash === value) ?? null) as T | null;
-    }
-    return (this.rows.get(value) ?? null) as T | null;
+    const row = query.includes("key_hash")
+      ? [...this.rows.values()].find(r => r.keyHash === value) ?? null
+      : this.rows.get(value) ?? null;
+    if (!row) return null;
+    return {
+      license_id: row.licenseId,
+      key_hash: row.keyHash,
+      edition: "network",
+      term: row.term,
+      state: row.state,
+      issued_at: row.issuedAt,
+      expires_at: row.expiresAt,
+      installation_id: row.installationId,
+      activated_at: row.activatedAt,
+      revoked_at: row.revokedAt,
+      created_at: row.issuedAt,
+    } as T;
   }
   async all<T>(): Promise<T[]> { return []; }
   async run(query: string, ...params: unknown[]): Promise<{ changes: number; lastInsertId?: number }> {
