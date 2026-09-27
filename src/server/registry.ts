@@ -3,6 +3,7 @@ import type { LicenseRuntime } from "./runtime";
 import { isValidEmail, isValidInstallationId } from "./contracts";
 
 const ITERATIONS = 210_000;
+const PROOF_WINDOW_MS = 5 * 60_000;
 const encoder = new TextEncoder();
 
 export interface InstallationStore {
