@@ -29,4 +29,11 @@
 | POST | `/v1/installations/recover` | Reserved; 501 |
 
 ## Storage
-`migrations/0001_installation_registry.sql` defines the D1 source-of-truth table. Domain logic depends on an installation-store interface, not D1-specific APIs, preserving the future Node/VPS port boundary.
+`migrations/0001_installation_registry.sql` defines the installation registry and `migrations/0002_license_authority.sql` defines the Network license authority table. Domain logic depends on storage interfaces; `D1InstallationStore` and `D1LicenseStore` provide the Cloudflare D1 adapters, preserving the future Node/VPS port boundary.
+
+## License authority (Phase 3/4)
+- Network license records store only a SHA-256 digest of the issued license key; the cleartext key is returned once by the authority and is not persisted.
+- Activation is atomically bound to one installation and checks active state and expiry before claiming the license.
+- Entitlements are signed with Ed25519 using a private `CryptoKey` supplied by the runtime; the private key must remain a server-side secret and must never be committed or returned by an API.
+- The D1 adapter performs activation as a conditional SQL update so concurrent requests cannot claim an unassigned license twice.
+- Public activation/refresh wiring remains gated until the installation `proof` contract is finalized. The Phase 2 authentication receipt is explicitly not a signed bearer credential, so it is not reused as proof.
