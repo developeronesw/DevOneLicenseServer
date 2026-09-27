@@ -1,85 +1,92 @@
 # Phase 5 — Production Deployment
 
-Phase 5 changes the deployment target from a manually assembled Worker/D1 stack to a deploy-first Cloudflare installation.
+Phase 5 turns the tested DevOne License Server into a self-provisioning Cloudflare Worker deployment with a browser installer.
 
-## What is automatic
+## Cloudflare resources
 
-The Wrangler configuration declares:
+The Wrangler configuration declares these bindings without account-specific IDs:
 
-- DB — D1
-- LICENSE_KV — KV
-- LICENSE_STORAGE — R2
+- Worker: `devone-license-server`
+- D1: `devone-license-db` → `DB`
+- KV: `LICENSE_KV`
+- R2: `LICENSE_STORAGE`
+- Static assets: `dist` → `ASSETS`
 
-The bindings intentionally omit account-specific resource IDs. With Wrangler 4.45.0+, Cloudflare can automatically provision missing KV, R2, and D1 resources during deployment. This repository uses a newer Wrangler 4.x release.
+Wrangler 4.45.0+ automatically provisions missing D1, KV, and R2 resources during deployment. The resources remain linked to the Worker on later deployments without committing account-specific IDs. citeturn0search0turn0search15
 
-The GitHub Actions workflow therefore does not require:
+The project intentionally uses Workers Static Assets rather than the older Workers Sites model. Cloudflare currently recommends Workers Static Assets for new full-stack applications. citeturn0search1turn0search14
 
-- a D1 database ID
-- a manually created KV namespace
-- a manually created R2 bucket
-- a Cloudflare API token in the browser
+## What you need before testing
 
-Cloudflare API credentials are still required by the deployment runner itself because the runner is what deploys the Worker and provisions account resources.
+You only need a Cloudflare API token and account ID available to the deployment environment.
+
+For GitHub Actions, create these repository secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+The browser installer must never receive a Cloudflare API token. Cloudflare resource creation happens during the trusted `wrangler deploy` step.
 
 ## Deployment flow
 
-1. Push to main or manually run the deployment workflow.
-2. CI installs dependencies and runs npm run check.
-3. CI runs npm test.
-4. CI builds the Vite assets.
-5. Wrangler applies D1 migrations through the DB binding. Missing D1 resources can be automatically provisioned.
-6. Wrangler deploys the Worker and static installer assets, automatically provisioning/linking KV and R2 as declared bindings.
-7. Open the Worker URL and visit /install.
-8. The installer verifies D1, KV, and R2 and initializes the server-side signing key if a Worker secret was not supplied.
+The production workflow now does this:
 
-## Required CI secrets
+1. Install dependencies.
+2. Run TypeScript checks.
+3. Run the test suite.
+4. Build the React/Vite application.
+5. Copy `wrangler.example.jsonc` to `wrangler.jsonc`.
+6. Run `wrangler deploy`, which provisions missing D1, KV, and R2 resources and deploys the Worker plus static assets.
+7. Apply all D1 migrations remotely.
+8. Open the deployed hostname and visit `/install`.
 
-Only these are required for deployment:
+There is no `DEVONE_LICENSE_D1_DATABASE_ID` secret and no manual `wrangler d1 create`, KV creation, or R2 creation step.
 
-- CLOUDFLARE_ACCOUNT_ID
-- CLOUDFLARE_API_TOKEN
+## Signing key bootstrap
 
-The API token is used only by GitHub Actions. It is never exposed to the installer page or stored in application code.
+The Worker still supports the stronger `LICENSE_SIGNING_PRIVATE_KEY` Worker secret when one is supplied.
 
-## Signing key modes
+For a zero-manual-resource test deployment, if that secret is absent the Worker generates an Ed25519 PKCS#8 private key on first signing use and stores the base64 private key in the private `LICENSE_KV` binding. The key never goes to the browser or API response.
 
-### Managed mode
+For production customer licensing, prefer supplying `LICENSE_SIGNING_PRIVATE_KEY` as a Cloudflare Worker secret so signing material is held by the platform secret store rather than application storage.
 
-Set the Worker secret LICENSE_SIGNING_PRIVATE_KEY before deployment. This is the preferred hardened configuration when the operator wants the signing key managed as a Cloudflare Worker secret.
+## Installer
 
-### Automatic installation mode
+The deployed application provides:
 
-If the Worker secret is absent, Phase 5 generates an Ed25519 key pair on first /install status check and stores the base64 PKCS#8 private key in the server-only LICENSE_KV binding. The private key is never returned by the API.
+- `/` — deployment overview
+- `/install` — Phase 5 installation/resource readiness screen
+- `/v1/health` — API health and resource binding check
 
-This mode is specifically intended to make a fresh deployment testable without an extra secret setup step. The next hardening phase can add an authenticated key-management migration path.
+The installer confirms that D1, KV, and R2 bindings are available. The actual Cloudflare resource provisioning has already happened during deployment; the browser is not given account-level privileges.
 
-## Installer UI
+## Production smoke test
 
-The installer is intentionally light/off-white and separate from the dark neon DevOne CMS 1.7.x visual language.
+After the first successful deployment:
 
-Open:
+1. Open the Worker URL.
+2. Open `/install`.
+3. Confirm all three resources show **Binding available**.
+4. Confirm `GET /v1/health` reports `status: ok`.
+5. Use a disposable DevOne CMS installation to exercise registration and activation.
+6. Verify the signed entitlement with the CMS verification implementation.
+7. Do not use a customer license for the first smoke test.
 
-- / — server landing/status page
-- /install — installation check and initialization UI
+The Phase 5 installer is intentionally a deployment/readiness screen at this stage. Administrator license issuance, recovery, audit logging, and production rate-limit policy remain subsequent hardening work.
 
-The installer checks:
+## Local checks
 
-- D1 migration tables
-- KV availability
-- R2 binding availability
-- signing-key availability/source
+```sh
+npm install
+npm run check
+npm test
+npm run build
+```
 
-A successful check reports Installation foundation complete.
+For a local Worker preview, copy `wrangler.example.jsonc` to `wrangler.jsonc` and run:
 
-## Smoke test
+```sh
+npx wrangler dev
+```
 
-After the GitHub Actions deployment succeeds:
-
-1. Open /install.
-2. Confirm D1, KV, R2, and Signing Key report available.
-3. Open /v1/health and confirm ok: true.
-4. Register a disposable DevOne CMS installation.
-5. Authenticate it.
-6. Continue with the Phase 5.1 administrator/license-management work.
-
-Do not use a customer license for the first production smoke test.
+Wrangler can also provision local development bindings when automatic provisioning is enabled. citeturn0search0
