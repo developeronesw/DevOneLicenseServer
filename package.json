@@ -1,6 +1,33 @@
 {
- "name":"@devone/license-server","private":true,"version":"0.2.0","type":"module","engines":{"node":">=22"},
- "scripts":{"dev":"vite","build":"tsc -b && vite build","check":"tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit","test":"tsx --test tests/*.test.ts","preview":"vite preview","worker:dev":"wrangler dev src/worker.ts","worker:deploy":"vite build && wrangler deploy"},
- "dependencies":{"react":"^19.1.1","react-dom":"^19.1.1"},
- "devDependencies":{"@cloudflare/workers-types":"^5.20260926.1","@types/node":"^24.6.0","@types/react":"^19.1.12","@types/react-dom":"^19.1.9","@vitejs/plugin-react":"^5.0.4","tsx":"^4.20.5","typescript":"^5.9.2","vite":"^8.3.1","wrangler":"^4.131.2"}
+  "name": "@devone/license-server",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "preview": "vite preview",
+    "worker:dev": "wrangler dev src/worker.ts",
+    "worker:deploy": "vite build && wrangler deploy"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260926.1",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^8.3.1",
+    "wrangler": "^4.45.0"
+  }
 }
