@@ -2,6 +2,7 @@ import { D1InstallationStore } from "./server/d1-installation-store";
 import { D1LicenseStore } from "./server/d1-license-store";
 import { InstallationRegistry } from "./server/registry";
 import { LicenseAuthority } from "./server/license-authority";
+import { D1RateLimiter } from "./server/rate-limit";
 import { genericError, jsonResponse } from "./server/http";
 import { LICENSE_API_VERSION, LICENSE_ROUTES } from "./server/contracts";
 import type { LicenseDatabase } from "./server/runtime";
@@ -44,6 +45,8 @@ export default { async fetch(request:Request,env:LicenseWorkerEnv):Promise<Respo
   else if(url.pathname.endsWith("/metadata")) result=await registry.updateMetadata(String(data.installationId||""),String(data.installationSecret||""),String(data.domain||""),String(data.adminEmail||""));
   else if(url.pathname===LICENSE_ROUTES.activate || url.pathname===LICENSE_ROUTES.refresh) {
    const proof=String(data.proof||""), timestamp=String(data.timestamp||""), installationId=String(data.installationId||"");
+   const limiter=new D1RateLimiter(db);
+   if(!(await limiter.allow(`${url.pathname}:${installationId}`,Date.now())))return failure(409,"rate_limited",id);
    const proofResult=await registry.verifyProof(installationId,proof,timestamp);
    if(!proofResult.ok)return failure(proofResult.status,proofResult.code,id);
    const key=await signingKey(env.LICENSE_SIGNING_PRIVATE_KEY);
