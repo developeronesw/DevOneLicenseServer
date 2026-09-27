@@ -12,9 +12,9 @@ The Wrangler configuration declares these bindings without account-specific IDs:
 - R2: `LICENSE_STORAGE`
 - Static assets: `dist` → `ASSETS`
 
-Wrangler 4.45.0+ automatically provisions missing D1, KV, and R2 resources during deployment. The resources remain linked to the Worker on later deployments without committing account-specific IDs. citeturn0search0turn0search15
+Wrangler 4.45.0+ automatically provisions missing D1, KV, and R2 resources during deployment. The resources remain linked to the Worker on later deployments without committing account-specific IDs.
 
-The project intentionally uses Workers Static Assets rather than the older Workers Sites model. Cloudflare currently recommends Workers Static Assets for new full-stack applications. citeturn0search1turn0search14
+The project intentionally uses Workers Static Assets rather than the older Workers Sites model. Cloudflare currently recommends Workers Static Assets for new full-stack applications.
 
 ## What you need before testing
 
@@ -89,4 +89,4 @@ For a local Worker preview, copy `wrangler.example.jsonc` to `wrangler.jsonc` an
 npx wrangler dev
 ```
 
-Wrangler can also provision local development bindings when automatic provisioning is enabled. citeturn0search0
+Wrangler can also provision local development bindings when automatic provisioning is enabled.
