@@ -76,6 +76,11 @@ export class D1LicenseStore implements LicenseAuthorityStore {
     return result.changes === 1;
   }
 
+  async findByInstallationId(installationId: string): Promise<LicenseRecord | null> {
+    const row = await this.db.first<DbRow>("SELECT * FROM licenses WHERE installation_id = ?", installationId);
+    return row ? mapRow(row) : null;
+  }
+
   async revoke(id: string, at: string): Promise<boolean> {
     const result = await this.db.run(
       "UPDATE licenses SET state = 'revoked', revoked_at = ? WHERE license_id = ? AND state = 'active'",
