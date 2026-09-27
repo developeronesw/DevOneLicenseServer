@@ -27,8 +27,8 @@ Cloudflare API credentials are still required by the deployment runner itself be
 2. CI installs dependencies and runs npm run check.
 3. CI runs npm test.
 4. CI builds the Vite assets.
-5. Wrangler applies D1 migrations through the DB binding. Missing D1 resources can be automatically provisioned.
-6. Wrangler deploys the Worker and static installer assets, automatically provisioning/linking KV and R2 as declared bindings.
+5. Wrangler deploys the Worker and static installer assets, automatically provisioning/linking the missing D1, KV, and R2 resources as declared bindings.
+6. Wrangler applies D1 migrations through the now-created DB binding.
 7. Open the Worker URL and visit /install.
 8. The installer verifies D1, KV, and R2 and initializes the server-side signing key if a Worker secret was not supplied.
 
