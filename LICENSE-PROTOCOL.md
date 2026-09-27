@@ -1,48 +1,32 @@
 # DevOne CMS 2.0 License Protocol
 
-This server implements the licensing contract defined by DevOne CMS 2.0.
+## Product rules
+- Base CMS is single-site without paid Network activation.
+- One Network license authorizes one installation; `maxSites: null` means unlimited sites within that installation.
+- Annual and 99-year terms; activation exactly once.
+- Invalid, expired, revoked, or unverifiable entitlements fail closed to single-site behavior.
 
-## Non-negotiable product rules
+## Installation registry (Phase 2)
+- Registration requires a 16–128 character URL-safe installation ID, a 32–256 character high-entropy installation secret, an HTTPS domain, and a valid administrator email.
+- Domain input may be a bare hostname or HTTPS URL; it is normalized to the lowercase hostname. Credentials, non-HTTPS schemes, and malformed URLs are rejected.
+- Secret verifier uses PBKDF2-HMAC-SHA256 with a random 16-byte salt and 210,000 iterations. Only the salt and verifier are stored.
+- Authentication compares verifier bytes in constant time, updates last-seen, and returns a five-minute receipt. The receipt is informational and is not a signed bearer token.
+- Deactivation prevents subsequent authentication. Deregistration additionally clears the verifier and salt and records its timestamp. Re-registration with the same ID remains blocked by the retained tombstone.
+- Metadata changes require the current installation secret.
+- Production requests must use HTTPS. Never log raw request bodies, installation secrets, or license keys.
 
-- Base CMS is single-site without a paid Network license.
-- One Network license authorizes one installation.
-- `maxSites: null` means unlimited sites within that authorized installation.
-- Terms are annual or 99-year.
-- Activation is exactly once.
-- A license is not transferable between independent installations.
-- Invalid, expired, revoked, or unverifiable Network entitlements fall back to single-site behavior.
-
-## Security model
-
-- Installation identity is separate from the paid license key.
-- Installation secrets are high-entropy credentials; only a verifier/hash is stored.
-- Raw installation secrets and license keys are never logged.
-- Private signing material exists only in the License Server runtime.
-- Registration and activation require authenticated installation proof, not merely a caller-supplied installation ID.
-- All production communication uses HTTPS.
-- Client-facing credential and license failures remain generic.
-
-## Phase 1 API contract
-
-The versioned API namespace is `/v1`.
-
-| Operation | Route | Phase 1 |
+## Routes
+| Method | Route | Status |
 |---|---|---|
-| Health | GET `/v1/health` | Implemented |
-| Register installation | POST `/v1/installations/register` | Contract only |
-| Authenticate installation | POST `/v1/installations/authenticate` | Contract only |
-| Activate Network license | POST `/v1/licenses/activate` | Contract only |
-| Refresh entitlement | POST `/v1/licenses/refresh` | Contract only |
-| Deactivate license | POST `/v1/licenses/deactivate` | Contract only |
-| Recover installation | POST `/v1/installations/recover` | Contract only |
-| De-register installation | POST `/v1/installations/deregister` | Contract only |
-| Update installation metadata | PATCH `/v1/installations/:id` | Contract reserved |
-| Revoke license | POST `/v1/licenses/:id/revoke` | Contract reserved |
+| GET | `/v1/health` | Implemented |
+| POST | `/v1/installations/register` | Implemented |
+| POST | `/v1/installations/authenticate` | Implemented |
+| POST | `/v1/installations/deactivate` | Implemented |
+| POST | `/v1/installations/deregister` | Implemented |
+| POST | `/v1/installations/metadata` | Implemented |
+| POST | `/v1/licenses/activate` | Reserved; 501 |
+| POST | `/v1/licenses/refresh` | Reserved; 501 |
+| POST | `/v1/installations/recover` | Reserved; 501 |
 
-Exact persistence, proof format, signing format, rate limits, and atomic activation behavior are Phase 2/3 implementation work. DevOne CMS 2.0 must not consume a fake activation endpoint.
-
-## Data boundary
-
-The future License Server system of record stores installation metadata including installation ID, canonical domain, administrator email, credential verifier, lifecycle timestamps, and license association.
-
-Runtime-specific storage is abstracted behind database, cache, and secret-provider interfaces so the licensing domain does not depend directly on D1, KV, PostgreSQL, SQLite, Redis, or filesystem APIs.
+## Storage
+`migrations/0001_installation_registry.sql` defines the D1 source-of-truth table. Domain logic depends on an installation-store interface, not D1-specific APIs, preserving the future Node/VPS port boundary.
