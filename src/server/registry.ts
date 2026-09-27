@@ -56,7 +56,7 @@ export class InstallationRegistry {
   constructor(private readonly store: InstallationStore, private readonly runtime: Pick<LicenseRuntime, "now">) {}
 
   async register(input: RegisterInstallationRequest): Promise<RegistryResult<RegistrationReceipt>> {
-    if (!isValidInstallationId(input.installationId)
+    if (!input || typeof input !== "object" || !isValidInstallationId(input.installationId)
       || typeof input.installationSecret !== "string"
       || input.installationSecret.length < 32
       || input.installationSecret.length > 256
