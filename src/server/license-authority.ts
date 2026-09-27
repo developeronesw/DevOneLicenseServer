@@ -76,6 +76,15 @@ export class LicenseAuthority {
     const bytes=await crypto.subtle.sign({name:"Ed25519"},this.signingPrivateKey,encoder.encode(JSON.stringify(unsigned)));
     return {ok:true,data:{...unsigned,signature:base64(new Uint8Array(bytes))}};
   }
+  async refresh(installationId:string):Promise<AuthorityResult<NetworkEntitlement>> {
+    if(typeof installationId!=="string"||!/^[A-Za-z0-9_-]{16,128}$/.test(installationId))return{ok:false,status:400,code:"invalid_refresh"};
+    const record=await this.store.findByInstallationId(installationId);
+    if(!record)return{ok:false,status:404,code:"license_not_found"};
+    if(record.state!=="active")return{ok:false,status:410,code:"license_unavailable"};
+    if(Date.parse(record.expiresAt)<=this.now().getTime())return{ok:false,status:410,code:"license_expired"};
+    return{ok:true,data:await this.entitlement(record)};
+  }
+
   async revoke(licenseId:string):Promise<AuthorityResult<{licenseId:string;state:"revoked"}>> {
     if(typeof licenseId!=="string" || !/^[0-9a-f-]{36}$/i.test(licenseId)) return {ok:false,status:400,code:"invalid_license_id"};
     const record=await this.store.findById(licenseId);
