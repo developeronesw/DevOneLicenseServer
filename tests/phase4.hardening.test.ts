@@ -21,6 +21,8 @@ test("installation proof requires the registered secret and a fresh timestamp",a
  const secret="a".repeat(48), installationId="inst_0123456789abcdef";
  assert.equal((await registry.register({installationId,installationSecret:secret,domain:"https://example.com",adminEmail:"admin@example.com"})).ok,true);
  assert.equal((await registry.verifyProof(installationId,secret,"2026-09-27T11:59:59.000Z")).ok,true);
- assert.equal((await registry.verifyProof(installationId,"wrong-secret","2026-09-27T11:59:59.000Z")).code,"proof_invalid");
- assert.equal((await registry.verifyProof(installationId,secret,"2026-09-27T11:40:00.000Z")).code,"proof_expired");
+ const bad = await registry.verifyProof(installationId,"wrong-secret","2026-09-27T11:59:59.000Z");
+ assert.equal(bad.ok,false); if(!bad.ok) assert.equal(bad.code,"proof_invalid");
+ const expired = await registry.verifyProof(installationId,secret,"2026-09-27T11:40:00.000Z");
+ assert.equal(expired.ok,false); if(!expired.ok) assert.equal(expired.code,"proof_expired");
 });
