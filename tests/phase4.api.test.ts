@@ -13,7 +13,7 @@ class Store implements LicenseAuthorityStore {
 }
 async function key(){const pair=await crypto.subtle.generateKey({name:"Ed25519",namedCurve:"Ed25519"},true,["sign","verify"]);return pair.privateKey;}
 test("refresh returns the signed entitlement for the bound installation",async()=>{
- const now=new Date("2026-09-27T12:00:00.000Z"), store=new Store(), authority=new LicenseAuthority(store,()=>now,key() as Promise<CryptoKey>);
+ const now=new Date("2026-09-27T12:00:00.000Z"), store=new Store();
  const signingKey=await key(); const a=new LicenseAuthority(store,()=>now,signingKey);
  const issued=await a.issue("annual"); assert.equal(issued.ok,true);
  if(!issued.ok)return;
