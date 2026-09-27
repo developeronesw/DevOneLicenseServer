@@ -7,6 +7,7 @@ class MemoryLicenses implements LicenseAuthorityStore {
   async insert(r:LicenseRecord){if(this.rows.has(r.licenseId))return false;this.rows.set(r.licenseId,structuredClone(r));return true;}
   async findByKeyHash(hash:string){return [...this.rows.values()].find(r=>r.keyHash===hash)??null;}
   async findById(id:string){return this.rows.get(id)??null;}
+  async findByInstallationId(installationId:string){return [...this.rows.values()].find(r=>r.installationId===installationId)??null;}
   async claimActivation(id:string,installationId:string,at:string){
     const r=this.rows.get(id);if(!r||r.state!=="active"||Date.parse(r.expiresAt)<=Date.parse(at)||r.installationId)return false;
     r.installationId=installationId;r.activatedAt=at;return true;

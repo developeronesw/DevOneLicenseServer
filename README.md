@@ -22,7 +22,7 @@ Apply `migrations/0001_installation_registry.sql` to the D1 database and bind it
 
 All API JSON responses are no-store and generic on errors. Request bodies are limited to 8 KiB. Use HTTPS in production. The authentication secret is sent only in the request body over HTTPS; never log request bodies or credentials. Registration is conflict-safe at the database insert boundary.
 
-License activation, recovery, signing, rate limiting, and administrator dashboard operations remain later-phase work; the corresponding routes are not falsely reported as operational.
+Phase 3 adds the Network license authority and D1 license schema. Phase 4 adds the production D1 license adapter and hardens request validation. Public activation/refresh remain intentionally gated until the installation proof contract is finalized; the existing five-minute authentication receipt is informational, not a signed bearer token. Rate limiting, recovery, and administrator operations remain later-phase work.
 
 ## Local development and checks
 

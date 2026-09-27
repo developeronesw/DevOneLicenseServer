@@ -3,6 +3,7 @@ import type { LicenseRuntime } from "./runtime";
 import { isValidEmail, isValidInstallationId } from "./contracts";
 
 const ITERATIONS = 210_000;
+const PROOF_WINDOW_MS = 5 * 60_000;
 const encoder = new TextEncoder();
 
 export interface InstallationStore {
@@ -56,7 +57,7 @@ export class InstallationRegistry {
   constructor(private readonly store: InstallationStore, private readonly runtime: Pick<LicenseRuntime, "now">) {}
 
   async register(input: RegisterInstallationRequest): Promise<RegistryResult<RegistrationReceipt>> {
-    if (!isValidInstallationId(input.installationId)
+    if (!input || typeof input !== "object" || !isValidInstallationId(input.installationId)
       || typeof input.installationSecret !== "string"
       || input.installationSecret.length < 32
       || input.installationSecret.length > 256
@@ -102,6 +103,15 @@ export class InstallationRegistry {
     record.lastSeenAt = this.runtime.now().toISOString();
     await this.store.update(record);
     return { ok: true, data: { installationId, authenticated: true, expiresAt: new Date(this.runtime.now().getTime() + 5 * 60_000).toISOString() } };
+  }
+
+  async verifyProof(installationId: string, proof: string, timestamp: string): Promise<RegistryResult<{ installationId: string; authenticated: true }>> {
+    if (!isValidInstallationId(installationId) || typeof proof !== "string" || typeof timestamp !== "string") return { ok: false, status: 401, code: "proof_invalid" };
+    const parsed = Date.parse(timestamp);
+    const now = this.runtime.now().getTime();
+    if (!Number.isFinite(parsed) || Math.abs(now - parsed) > PROOF_WINDOW_MS) return { ok: false, status: 401, code: "proof_expired" };
+    const auth = await this.authenticate(installationId, proof);
+    return auth.ok ? { ok: true, data: { installationId, authenticated: true } } : { ok: false, status: 401, code: "proof_invalid" };
   }
 
   async updateMetadata(installationId: string, installationSecret: string, domainInput: string, adminEmail: string): Promise<RegistryResult<{ installationId: string; domain: string; adminEmail: string }>> {

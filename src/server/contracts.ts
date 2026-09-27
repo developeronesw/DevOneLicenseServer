@@ -25,15 +25,19 @@ export interface ApiError { ok: false; error: string; code: string; requestId: s
 export interface ApiSuccess<T> { ok: true; data: T; requestId: string; }
 export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 export const LICENSE_ROUTES = {
- health:"/v1/health", register:"/v1/installations/register", authenticate:"/v1/installations/authenticate",
- activate:"/v1/licenses/activate", refresh:"/v1/licenses/refresh", deactivate:"/v1/licenses/deactivate",
- recover:"/v1/installations/recover", deregister:"/v1/installations/deregister",
+  health:"/v1/health", register:"/v1/installations/register", authenticate:"/v1/installations/authenticate",
+  activate:"/v1/licenses/activate", refresh:"/v1/licenses/refresh", deactivate:"/v1/licenses/deactivate",
+  recover:"/v1/installations/recover", deregister:"/v1/installations/deregister",
 } as const;
 const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const installationIdPattern=/^[A-Za-z0-9_-]{16,128}$/;
-export function isValidEmail(value:string):boolean{return emailPattern.test(value.trim());}
-export function isValidInstallationId(value:string):boolean{return installationIdPattern.test(value);}
-export function isValidNetworkEntitlement(value:NetworkEntitlement):boolean{
- return value.product===LICENSE_PRODUCT&&value.edition==="network"&&value.maxSites===null&&value.signature.length>0
- &&Number.isFinite(Date.parse(value.issuedAt))&&Number.isFinite(Date.parse(value.expiresAt));
+export function isValidEmail(value: unknown): value is string {
+  return typeof value === "string" && emailPattern.test(value.trim());
+}
+export function isValidInstallationId(value: unknown): value is string {
+  return typeof value === "string" && installationIdPattern.test(value);
+}
+export function isValidNetworkEntitlement(value: NetworkEntitlement):boolean{
+  return value.product===LICENSE_PRODUCT&&value.edition==="network"&&value.maxSites===null&&value.signature.length>0
+    &&Number.isFinite(Date.parse(value.issuedAt))&&Number.isFinite(Date.parse(value.expiresAt));
 }

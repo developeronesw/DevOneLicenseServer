@@ -18,6 +18,7 @@ export interface LicenseAuthorityStore {
   insert(record: LicenseRecord): Promise<boolean>;
   findByKeyHash(hash: string): Promise<LicenseRecord | null>;
   findById(id: string): Promise<LicenseRecord | null>;
+  findByInstallationId(installationId: string): Promise<LicenseRecord | null>;
   /** Must atomically claim only an unassigned, active, unexpired license. */
   claimActivation(id: string, installationId: string, at: string): Promise<boolean>;
   revoke(id: string, at: string): Promise<boolean>;
@@ -59,6 +60,12 @@ export class LicenseAuthority {
     // The cleartext key is returned once and is never persisted.
     return {ok:true,data:{licenseId:id,licenseKey:key,issuedAt,expiresAt}};
   }
+  private async entitlement(record: LicenseRecord): Promise<NetworkEntitlement> {
+    const unsigned={licenseId:record.licenseId,product:"devone-cms" as const,edition:"network" as const,maxSites:null,features:FEATURES,issuedAt:record.issuedAt,expiresAt:record.expiresAt,term:record.term};
+    const bytes=await crypto.subtle.sign({name:"Ed25519"},this.signingPrivateKey,encoder.encode(JSON.stringify(unsigned)));
+    return {...unsigned,signature:base64(new Uint8Array(bytes))};
+  }
+
   async activate(licenseKey:string, installationId:string): Promise<AuthorityResult<NetworkEntitlement>> {
     if (typeof licenseKey!=="string" || !/^D1N-[A-Za-z0-9_-]{40,60}$/.test(licenseKey) || typeof installationId!=="string" || !/^[A-Za-z0-9_-]{16,128}$/.test(installationId)) {
       return {ok:false,status:400,code:"invalid_activation"};
@@ -71,11 +78,19 @@ export class LicenseAuthority {
     if (!record.installationId && !(await this.store.claimActivation(record.licenseId,installationId,this.now().toISOString()))) {
       return {ok:false,status:409,code:"license_already_activated"};
     }
-    const issuedAt=this.now().toISOString();
-    const unsigned={licenseId:record.licenseId,product:"devone-cms" as const,edition:"network" as const,maxSites:null,features:FEATURES,issuedAt:record.issuedAt,expiresAt:record.expiresAt,term:record.term};
-    const bytes=await crypto.subtle.sign({name:"Ed25519"},this.signingPrivateKey,encoder.encode(JSON.stringify(unsigned)));
-    return {ok:true,data:{...unsigned,signature:base64(new Uint8Array(bytes))}};
+    const current=await this.store.findByKeyHash(await sha256(licenseKey));
+    if(!current||current.state!=="active"||current.installationId!==installationId)return{ok:false,status:409,code:"license_state_conflict"};
+    return{ok:true,data:await this.entitlement(current)};
   }
+  async refresh(installationId:string):Promise<AuthorityResult<NetworkEntitlement>> {
+    if(typeof installationId!=="string"||!/^[A-Za-z0-9_-]{16,128}$/.test(installationId))return{ok:false,status:400,code:"invalid_refresh"};
+    const record=await this.store.findByInstallationId(installationId);
+    if(!record)return{ok:false,status:404,code:"license_not_found"};
+    if(record.state!=="active")return{ok:false,status:410,code:"license_unavailable"};
+    if(Date.parse(record.expiresAt)<=this.now().getTime())return{ok:false,status:410,code:"license_expired"};
+    return{ok:true,data:await this.entitlement(record)};
+  }
+
   async revoke(licenseId:string):Promise<AuthorityResult<{licenseId:string;state:"revoked"}>> {
     if(typeof licenseId!=="string" || !/^[0-9a-f-]{36}$/i.test(licenseId)) return {ok:false,status:400,code:"invalid_license_id"};
     const record=await this.store.findById(licenseId);
