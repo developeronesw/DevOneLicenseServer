@@ -15,7 +15,7 @@ const dbAdapter=(db:D1Binding):LicenseDatabase=>({
  batch:async()=>{throw new Error("Batch not used by registry adapter");},
 });
 function success<T>(data:T,id:string):Response{return jsonResponse(200,{ok:true,data,requestId:id});}
-function failure(status:400|401|409|404,code:string,id:string):Response{return jsonResponse(status,{ok:false,error:"The request could not be completed.",code,requestId:id});}
+function failure(status:400|401|409|404|501,code:string,id:string):Response{return jsonResponse(status,{ok:false,error:"The request could not be completed.",code,requestId:id});}
 async function body(request:Request):Promise<Record<string,unknown>|null>{
  const type=request.headers.get("content-type")||"";
  if(!type.toLowerCase().includes("application/json"))return null;

@@ -28,7 +28,7 @@ function fromBase64(value: string): Uint8Array {
 async function deriveVerifier(secret: string, salt: Uint8Array): Promise<Uint8Array> {
   const material = await crypto.subtle.importKey("raw", encoder.encode(secret), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations: ITERATIONS },
+    { name: "PBKDF2", hash: "SHA-256", salt: salt.buffer.slice(salt.byteOffset, salt.byteOffset + salt.byteLength) as ArrayBuffer, iterations: ITERATIONS },
     material,
     256,
   );
