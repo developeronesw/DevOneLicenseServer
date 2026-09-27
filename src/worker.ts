@@ -27,7 +27,8 @@ async function body(request:Request):Promise<Record<string,unknown>|null>{
 }
 function bytesFromBase64(value:string):Uint8Array { const raw=Uint8Array.from(atob(value), c=>c.charCodeAt(0)); return new Uint8Array(raw); }
 async function signingKey(value:string):Promise<CryptoKey>{
- return crypto.subtle.importKey("pkcs8",bytesFromBase64(value),{name:"Ed25519"},false,["sign"]);
+ const bytes=bytesFromBase64(value); const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;
+ return crypto.subtle.importKey("pkcs8",buffer,{name:"Ed25519"},false,["sign"]);
 }
 export default { async fetch(request:Request,env:LicenseWorkerEnv):Promise<Response>{
  const url=new URL(request.url); const id=crypto.randomUUID();
