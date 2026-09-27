@@ -104,6 +104,15 @@ export class InstallationRegistry {
     return { ok: true, data: { installationId, authenticated: true, expiresAt: new Date(this.runtime.now().getTime() + 5 * 60_000).toISOString() } };
   }
 
+  async verifyProof(installationId: string, proof: string, timestamp: string): Promise<RegistryResult<{ installationId: string; authenticated: true }>> {
+    if (!isValidInstallationId(installationId) || typeof proof !== "string" || typeof timestamp !== "string") return { ok: false, status: 401, code: "proof_invalid" };
+    const parsed = Date.parse(timestamp);
+    const now = this.runtime.now().getTime();
+    if (!Number.isFinite(parsed) || Math.abs(now - parsed) > PROOF_WINDOW_MS) return { ok: false, status: 401, code: "proof_expired" };
+    const auth = await this.authenticate(installationId, proof);
+    return auth.ok ? { ok: true, data: { installationId, authenticated: true } } : { ok: false, status: 401, code: "proof_invalid" };
+  }
+
   async updateMetadata(installationId: string, installationSecret: string, domainInput: string, adminEmail: string): Promise<RegistryResult<{ installationId: string; domain: string; adminEmail: string }>> {
     const auth = await this.authenticate(installationId, installationSecret);
     if (!auth.ok) return auth;
