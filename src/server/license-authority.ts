@@ -18,6 +18,7 @@ export interface LicenseAuthorityStore {
   insert(record: LicenseRecord): Promise<boolean>;
   findByKeyHash(hash: string): Promise<LicenseRecord | null>;
   findById(id: string): Promise<LicenseRecord | null>;
+  findByInstallationId(installationId: string): Promise<LicenseRecord | null>;
   /** Must atomically claim only an unassigned, active, unexpired license. */
   claimActivation(id: string, installationId: string, at: string): Promise<boolean>;
   revoke(id: string, at: string): Promise<boolean>;
@@ -71,10 +72,9 @@ export class LicenseAuthority {
     if (!record.installationId && !(await this.store.claimActivation(record.licenseId,installationId,this.now().toISOString()))) {
       return {ok:false,status:409,code:"license_already_activated"};
     }
-    const issuedAt=this.now().toISOString();
-    const unsigned={licenseId:record.licenseId,product:"devone-cms" as const,edition:"network" as const,maxSites:null,features:FEATURES,issuedAt:record.issuedAt,expiresAt:record.expiresAt,term:record.term};
-    const bytes=await crypto.subtle.sign({name:"Ed25519"},this.signingPrivateKey,encoder.encode(JSON.stringify(unsigned)));
-    return {ok:true,data:{...unsigned,signature:base64(new Uint8Array(bytes))}};
+    const current=await this.store.findByKeyHash(await sha256(licenseKey));
+    if(!current||current.state!=="active"||current.installationId!==installationId)return{ok:false,status:409,code:"license_state_conflict"};
+    return{ok:true,data:await this.entitlement(current)};
   }
   async refresh(installationId:string):Promise<AuthorityResult<NetworkEntitlement>> {
     if(typeof installationId!=="string"||!/^[A-Za-z0-9_-]{16,128}$/.test(installationId))return{ok:false,status:400,code:"invalid_refresh"};
