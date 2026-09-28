@@ -23,12 +23,15 @@ interface AdminKV {
 }
 function b64(bytes: Uint8Array): string { let binary = ""; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary); }
 function fromB64(value: string): Uint8Array { return Uint8Array.from(atob(value), c => c.charCodeAt(0)); }
-async function derivePassword(password: string, salt: Uint8Array): Promise<Uint8Array> {
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+async function derivePassword(password: string, salt: ArrayBuffer): Promise<Uint8Array<ArrayBuffer>> {
   const material = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const saltBuffer = new ArrayBuffer(salt.byteLength);
-  new Uint8Array(saltBuffer).set(salt);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: saltBuffer, iterations: ITERATIONS },
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: ITERATIONS },
     material,
     256,
   );
@@ -74,7 +77,7 @@ export class AdminAuth {
     let verifier: Uint8Array;
     try {
       salt = crypto.getRandomValues(new Uint8Array(16));
-      verifier = await derivePassword(password, salt);
+      verifier = await derivePassword(password, toArrayBuffer(salt));
     } catch (error) {
       console.error("admin_setup_crypto_error", error);
       return { ok: false, status: 409, code: "admin_setup_crypto_failed" };
@@ -107,7 +110,7 @@ export class AdminAuth {
   async login(username: string, password: string): Promise<AdminResult<{ username: string; email: string }>> {
     const row = await this.db.first<AdminRow>("SELECT * FROM admin_users WHERE username = ? COLLATE NOCASE", username.trim());
     if (!row || !validPassword(password)) return { ok: false, status: 401, code: "invalid_credentials" };
-    const candidate = await derivePassword(password, fromB64(row.password_salt));
+    const candidate = await derivePassword(password, toArrayBuffer(fromB64(row.password_salt)));
     if (!safeEqual(candidate, fromB64(row.password_verifier))) return { ok: false, status: 401, code: "invalid_credentials" };
     try {
       return await this.createSession(row.username, row.email);
