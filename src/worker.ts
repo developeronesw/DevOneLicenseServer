@@ -84,12 +84,21 @@ async function installationStatus(env: LicenseWorkerEnv): Promise<Record<string,
   let r2Ready = false;
   try { await env.LICENSE_STORAGE.head("system/installation-probe"); r2Ready = true; } catch { r2Ready = false; }
   const foundation = tableNames.has("installations") && tableNames.has("licenses") && tableNames.has("api_rate_limits");
+  let administratorConfigured = false;
+  if (tableNames.has("admin_users")) {
+    try {
+      const adminCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM admin_users").bind().first<{ count: number }>();
+      administratorConfigured = Number(adminCount?.count || 0) > 0;
+    } catch {
+      administratorConfigured = false;
+    }
+  }
   return {
     service: "devone-license-server", apiVersion: LICENSE_API_VERSION,
     ready: foundation && tableNames.has("admin_users") && r2Ready,
     resources: { d1: foundation, kv: true, r2: r2Ready },
     signingKey: { configured: true, source: env.LICENSE_SIGNING_PRIVATE_KEY ? "worker-secret" : "server-side-kv" },
-    administrator: { configured: tableNames.has("admin_users") },
+    administrator: { configured: administratorConfigured },
   };
 }
 function adminAuth(env: LicenseWorkerEnv): AdminAuth {
