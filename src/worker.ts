@@ -136,6 +136,7 @@ export default {
     if (url.pathname === "/v1/admin/logout" && request.method === "POST") {
       try {
         const result = await auth.logout(request);
+        if (!result.ok) return failure(result.status, result.code, id, result.cookie);
         return successWithCookie(result.data, id, result.cookie);
       } catch { return genericError(500, "admin_logout_failed", id); }
     }
@@ -143,7 +144,7 @@ export default {
     if (url.pathname.startsWith("/v1/admin/") && request.method === "GET") {
       const denied = await adminRequired(auth, request, id);
       if (denied) return denied;
-      if (url.pathname === "/v1/admin/me") return success((await auth.require(request)).data, id);
+      if (url.pathname === "/v1/admin/me") { const current = await auth.require(request); return current.ok ? success(current.data, id) : failure(current.status, current.code, id); }
       if (url.pathname === "/v1/admin/licenses") {
         try {
           const rows = await db.all<{
@@ -166,7 +167,8 @@ export default {
       try {
         const key = await ensureSigningKey(env);
         const authority = new LicenseAuthority(new D1LicenseStore(db), () => new Date(), key);
-        const result = await authority.issue(String(data.term || ""));
+        const term = data.term === "annual" || data.term === "lifetime" ? data.term : "";
+        const result = await authority.issue(term);
         return result.ok ? success(result.data, id) : failure(result.status, result.code, id);
       } catch { return genericError(500, "license_issue_failed", id); }
     }
