@@ -1,7 +1,7 @@
 export const LICENSE_API_VERSION = "1" as const;
 export const LICENSE_PRODUCT = "devone-cms" as const;
 export type LicenseEdition = "single" | "network";
-export type LicenseTerm = "annual" | "lifetime";
+export type LicenseTerm = "annual" | "lifetime" | "99-year";
 export type LicenseState = "active" | "expired" | "revoked" | "deactivated";
 export type InstallationState = "active" | "deactivated" | "deregistered" | "recovery";
 export type LicenseFeature = "multisite" | "network_admin" | "network_users" | "network_domains" | "network_extensions";
