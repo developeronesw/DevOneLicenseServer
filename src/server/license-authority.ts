@@ -39,7 +39,7 @@ function randomToken(bytes=32): string {
 function addTerm(date: Date, term: LicenseTerm): Date {
   const result = new Date(date);
   if (term === "annual") result.setUTCFullYear(result.getUTCFullYear()+1);
-  else result.setUTCFullYear(result.getUTCFullYear()+1000);
+  else return new Date("9999-12-31T23:59:59.999Z");
   return result;
 }
 export class LicenseAuthority {
