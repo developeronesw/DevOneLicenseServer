@@ -44,6 +44,12 @@ export type AdminResult<T> = { ok: true; data: T; cookie?: string } | { ok: fals
 
 export class AdminAuth {
   constructor(private readonly db: AdminDatabase, private readonly kv: AdminKV) {}
+  private async createSession(username: string, email: string): Promise<AdminResult<{ username: string; email: string }>> {
+    const token = b64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    await this.kv.put("admin/session/" + await tokenHash(token), JSON.stringify({ username, email }), { expirationTtl: SESSION_TTL });
+    return { ok: true, data: { username, email }, cookie: sessionCookie(token) };
+  }
+
   async setup(input: Record<string, unknown>): Promise<AdminResult<{ username: string; email: string }>> {
     const username = String(input.username || "").trim();
     const email = String(input.email || "").trim().toLowerCase();
@@ -51,21 +57,45 @@ export class AdminAuth {
     if (!validUsername(username) || !isValidEmail(email) || !validPassword(password)) return { ok: false, status: 400, code: "invalid_admin_setup" };
     const count = await this.db.first<{ count: number }>("SELECT COUNT(*) as count FROM admin_users");
     if ((count?.count || 0) > 0) return { ok: false, status: 409, code: "admin_already_configured" };
+
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const verifier = await derivePassword(password, salt);
     const now = new Date().toISOString();
-    const result = await this.db.run("INSERT INTO admin_users (admin_id, username, email, password_salt, password_verifier, created_at) VALUES (?, ?, ?, ?, ?, ?)", crypto.randomUUID(), username, email, b64(salt), b64(verifier), now);
-    if (result.changes !== 1) return { ok: false, status: 409, code: "admin_setup_conflict" };
-    return this.login(username, String(password));
+    const adminId = crypto.randomUUID();
+
+    let inserted = false;
+    try {
+      const result = await this.db.run("INSERT INTO admin_users (admin_id, username, email, password_salt, password_verifier, created_at) VALUES (?, ?, ?, ?, ?, ?)", adminId, username, email, b64(salt), b64(verifier), now);
+      inserted = result.changes === 1;
+    } catch (error) {
+      console.error("admin_setup_database_error", error);
+      return { ok: false, status: 409, code: "admin_setup_database_failed" };
+    }
+    if (!inserted) return { ok: false, status: 409, code: "admin_setup_conflict" };
+
+    try {
+      return await this.createSession(username, email);
+    } catch (error) {
+      console.error("admin_setup_session_error", error);
+      try {
+        await this.db.run("DELETE FROM admin_users WHERE admin_id = ?", adminId);
+      } catch (rollbackError) {
+        console.error("admin_setup_rollback_error", rollbackError);
+      }
+      return { ok: false, status: 409, code: "admin_setup_session_failed" };
+    }
   }
   async login(username: string, password: string): Promise<AdminResult<{ username: string; email: string }>> {
     const row = await this.db.first<AdminRow>("SELECT * FROM admin_users WHERE username = ? COLLATE NOCASE", username.trim());
     if (!row || !validPassword(password)) return { ok: false, status: 401, code: "invalid_credentials" };
     const candidate = await derivePassword(password, fromB64(row.password_salt));
     if (!safeEqual(candidate, fromB64(row.password_verifier))) return { ok: false, status: 401, code: "invalid_credentials" };
-    const token = b64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    await this.kv.put("admin/session/" + await tokenHash(token), JSON.stringify({ username: row.username, email: row.email }), { expirationTtl: SESSION_TTL });
-    return { ok: true, data: { username: row.username, email: row.email }, cookie: sessionCookie(token) };
+    try {
+      return await this.createSession(row.username, row.email);
+    } catch (error) {
+      console.error("admin_login_session_error", error);
+      return { ok: false, status: 401, code: "admin_session_failed" };
+    }
   }
   async require(request: Request): Promise<AdminResult<{ username: string; email: string }>> {
     const token = cookieToken(request);
