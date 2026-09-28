@@ -30,19 +30,31 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return buffer;
 }
 async function derivePassword(password: string, salt: ArrayBuffer): Promise<Uint8Array<ArrayBuffer>> {
-  const material = await crypto.subtle.importKey(
-    "raw",
-    toArrayBuffer(encoder.encode(password)),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt, iterations: ITERATIONS },
-    material,
-    256,
-  );
-  return new Uint8Array(bits);
+  let material: CryptoKey;
+  try {
+    material = await crypto.subtle.importKey(
+      "raw",
+      toArrayBuffer(encoder.encode(password)),
+      "PBKDF2",
+      false,
+      ["deriveBits"],
+    );
+  } catch (error) {
+    console.error("admin_crypto_import_key_failed", error);
+    throw new Error("admin_crypto_import_key_failed");
+  }
+
+  try {
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", hash: "SHA-256", salt: toArrayBuffer(new Uint8Array(salt)), iterations: ITERATIONS },
+      material,
+      256,
+    );
+    return new Uint8Array(bits);
+  } catch (error) {
+    console.error("admin_crypto_derive_bits_failed", error);
+    throw new Error("admin_crypto_derive_bits_failed");
+  }
 }
 function safeEqual(a: Uint8Array, b: Uint8Array): boolean { if (a.length !== b.length) return false; let diff = 0; for (let i = 0; i < a.length; i += 1) diff |= a[i] ^ b[i]; return diff === 0; }
 function validUsername(value: unknown): value is string { return typeof value === "string" && /^[A-Za-z0-9._-]{3,48}$/.test(value); }
@@ -87,7 +99,11 @@ export class AdminAuth {
       verifier = await derivePassword(password, toArrayBuffer(salt));
     } catch (error) {
       console.error("admin_setup_crypto_error", error);
-      return { ok: false, status: 409, code: "admin_setup_crypto_failed" };
+      const code = error instanceof Error && (
+        error.message === "admin_crypto_import_key_failed" ||
+        error.message === "admin_crypto_derive_bits_failed"
+      ) ? error.message : "admin_setup_crypto_failed";
+      return { ok: false, status: 409, code };
     }
     const now = new Date().toISOString();
     const adminId = crypto.randomUUID();
