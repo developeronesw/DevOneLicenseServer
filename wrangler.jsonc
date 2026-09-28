@@ -4,7 +4,7 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-25",
   "workers_dev": true,
-  "assets": { "directory": "./dist", "binding": "ASSETS" },
+  "assets": { "directory": "./dist", "binding": "ASSETS", "not_found_handling": "single-page-application" },
   "d1_databases": [{ "binding": "DB", "database_name": "devone-license-db", "migrations_dir": "migrations" }],
   "kv_namespaces": [{ "binding": "LICENSE_KV" }],
   "r2_buckets": [{ "binding": "LICENSE_STORAGE" }]
