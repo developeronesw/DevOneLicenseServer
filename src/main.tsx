@@ -1,4 +1,5 @@
 import { StrictMode, useEffect, useState } from "react";
+import type React from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
@@ -35,7 +36,7 @@ function Installer() {
 
 function AdminSetup(){const [form,setForm]=useState({username:"",email:"",password:"",confirm:""}),[error,setError]=useState("");
   async function submit(e:React.FormEvent){e.preventDefault();setError("");if(form.password!==form.confirm){setError("Passwords do not match.");return;}try{await api("/v1/admin/setup",{method:"POST",body:JSON.stringify(form)});window.location.href="/admin";}catch(e){setError(e instanceof Error?e.message:"Administrator setup failed.");}}
-  return <Shell eyebrow="DEVONE CMS 2.0 · ADMIN SETUP"><div className="auth-card"><span className="step">ONE-TIME SETUP</span><h1>Create your administrator.</h1><p className="lead">This account controls license issuance and revocation. Your password is never stored in cleartext.</p><form onSubmit={submit}>{["username","email","password","confirm"].map(k=><label key={k}>{k==="confirm"?"Confirm password":k[0].toUpperCase()+k.slice(1)}<input required type={k.includes("password")||k==="confirm"?"password":k==="email"?"email":"text"} minLength={k==="password"||k==="confirm"?12:3} value:(form as any)[k] onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}{error&&<div className="error">{error}</div>}<button className="primary" type="submit">Create administrator →</button></form></div></Shell>;
+  return <Shell eyebrow="DEVONE CMS 2.0 · ADMIN SETUP"><div className="auth-card"><span className="step">ONE-TIME SETUP</span><h1>Create your administrator.</h1><p className="lead">This account controls license issuance and revocation. Your password is never stored in cleartext.</p><form onSubmit={submit}>{["username","email","password","confirm"].map(k=><label key={k}>{k==="confirm"?"Confirm password":k[0].toUpperCase()+k.slice(1)}<input required type={k.includes("password")||k==="confirm"?"password":k==="email"?"email":"text"} minLength={k==="password"||k==="confirm"?12:3} value={(form as any)[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}{error&&<div className="error">{error}</div>}<button className="primary" type="submit">Create administrator →</button></form></div></Shell>;
 }
 
 function Login(){const [username,setUsername]=useState(""),[password,setPassword]=useState(""),[error,setError]=useState("");
