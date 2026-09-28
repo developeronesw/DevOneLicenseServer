@@ -194,7 +194,8 @@ export default {
       try {
         const key = await ensureSigningKey(env);
         const authority = new LicenseAuthority(new D1LicenseStore(db), () => new Date(), key);
-        const result = await authority.issue(String(data.term || ""));
+        const term = data.term === "annual" || data.term === "lifetime" ? data.term : "";
+        const result = await authority.issue(term);
         return result.ok ? success(result.data, id) : failure(result.status, result.code, id);
       } catch { return genericError(500, "purchase_issue_failed", id); }
     }
