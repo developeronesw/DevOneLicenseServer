@@ -27,7 +27,7 @@ async function derivePassword(password: string, salt: Uint8Array): Promise<Uint8
   const material = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
   const saltBuffer = new ArrayBuffer(salt.byteLength);
   new Uint8Array(saltBuffer).set(salt);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: saltBuffer as unknown as BufferSource, iterations: ITERATIONS }, material, 256);
+  const deriveBits = crypto.subtle.deriveBits as unknown as (algorithm: { name: "PBKDF2"; hash: "SHA-256"; salt: ArrayBuffer; iterations: number }, baseKey: CryptoKey, length: number) => Promise<ArrayBuffer>;\n  const bits = await deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: saltBuffer, iterations: ITERATIONS }, material, 256);
   return new Uint8Array(bits);
 }
 function safeEqual(a: Uint8Array, b: Uint8Array): boolean { if (a.length !== b.length) return false; let diff = 0; for (let i = 0; i < a.length; i += 1) diff |= a[i] ^ b[i]; return diff === 0; }
