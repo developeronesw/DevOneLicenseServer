@@ -25,7 +25,8 @@ function b64(bytes: Uint8Array): string { let binary = ""; for (const byte of by
 function fromB64(value: string): Uint8Array { return Uint8Array.from(atob(value), c => c.charCodeAt(0)); }
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const buffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(buffer).set(bytes);
+  const view = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i += 1) view[i] = bytes[i];
   return buffer;
 }
 async function derivePassword(password: string, salt: ArrayBuffer): Promise<Uint8Array<ArrayBuffer>> {
