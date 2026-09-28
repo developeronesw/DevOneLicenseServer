@@ -167,7 +167,8 @@ export default {
       try {
         const key = await ensureSigningKey(env);
         const authority = new LicenseAuthority(new D1LicenseStore(db), () => new Date(), key);
-        const term = data.term === "annual" || data.term === "lifetime" ? data.term : "";
+        const term = data.term === "annual" ? "annual" : data.term === "lifetime" ? "lifetime" : null;
+        if (!term) return failure(400, "invalid_license_term", id);
         const result = await authority.issue(term);
         return result.ok ? success(result.data, id) : failure(result.status, result.code, id);
       } catch { return genericError(500, "license_issue_failed", id); }
@@ -194,7 +195,8 @@ export default {
       try {
         const key = await ensureSigningKey(env);
         const authority = new LicenseAuthority(new D1LicenseStore(db), () => new Date(), key);
-        const term = data.term === "annual" || data.term === "lifetime" ? data.term : "";
+        const term = data.term === "annual" ? "annual" : data.term === "lifetime" ? "lifetime" : null;
+        if (!term) return failure(400, "invalid_license_term", id);
         const result = await authority.issue(term);
         return result.ok ? success(result.data, id) : failure(result.status, result.code, id);
       } catch { return genericError(500, "purchase_issue_failed", id); }
