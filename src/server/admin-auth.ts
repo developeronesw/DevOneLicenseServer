@@ -1,6 +1,6 @@
 import { isValidEmail } from "./contracts";
 
-const ITERATIONS = 210_000;
+const ITERATIONS = 10_000;
 const SESSION_TTL = 8 * 60 * 60;
 const encoder = new TextEncoder();
 
