@@ -39,7 +39,7 @@ function randomToken(bytes=32): string {
 function addTerm(date: Date, term: LicenseTerm): Date {
   const result = new Date(date);
   if (term === "annual") result.setUTCFullYear(result.getUTCFullYear()+1);
-  else result.setUTCFullYear(result.getUTCFullYear()+99);
+  else result.setUTCFullYear(result.getUTCFullYear()+1000);
   return result;
 }
 export class LicenseAuthority {
@@ -49,7 +49,7 @@ export class LicenseAuthority {
     private readonly signingPrivateKey: CryptoKey,
   ) {}
   async issue(term: LicenseTerm): Promise<AuthorityResult<{licenseId:string; licenseKey:string; issuedAt:string; expiresAt:string}>> {
-    if (term !== "annual" && term !== "99-year") return {ok:false,status:400,code:"invalid_term"};
+    if (term !== "annual" && term !== "lifetime") return {ok:false,status:400,code:"invalid_term"};
     const issued = this.now();
     const key = "D1N-"+randomToken(32);
     const id = crypto.randomUUID();
