@@ -55,11 +55,24 @@ export class AdminAuth {
     const email = String(input.email || "").trim().toLowerCase();
     const password = input.password;
     if (!validUsername(username) || !isValidEmail(email) || !validPassword(password)) return { ok: false, status: 400, code: "invalid_admin_setup" };
-    const count = await this.db.first<{ count: number }>("SELECT COUNT(*) as count FROM admin_users");
+    let count: { count: number } | null;
+    try {
+      count = await this.db.first<{ count: number }>("SELECT COUNT(*) as count FROM admin_users");
+    } catch (error) {
+      console.error("admin_setup_count_error", error);
+      return { ok: false, status: 409, code: "admin_setup_count_failed" };
+    }
     if ((count?.count || 0) > 0) return { ok: false, status: 409, code: "admin_already_configured" };
 
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const verifier = await derivePassword(password, salt);
+    let salt: Uint8Array;
+    let verifier: Uint8Array;
+    try {
+      salt = crypto.getRandomValues(new Uint8Array(16));
+      verifier = await derivePassword(password, salt);
+    } catch (error) {
+      console.error("admin_setup_crypto_error", error);
+      return { ok: false, status: 409, code: "admin_setup_crypto_failed" };
+    }
     const now = new Date().toISOString();
     const adminId = crypto.randomUUID();
 
