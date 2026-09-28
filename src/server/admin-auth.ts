@@ -54,7 +54,7 @@ function cookieToken(request: Request): string | null {
   const match = raw.match(/(?:^|;\s*)devone_admin_session=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
-async function tokenHash(token: string): Promise<string> { return b64(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(token)))); }
+async function tokenHash(token: string): Promise<string> { return b64(new Uint8Array(await crypto.subtle.digest("SHA-256", toArrayBuffer(encoder.encode(token))))); }
 
 export type AdminResult<T> = { ok: true; data: T; cookie?: string } | { ok: false; status: 400 | 401 | 409; code: string; cookie?: string };
 
