@@ -1,5 +1,6 @@
 import { isValidEmail } from "./contracts";
 
+// Keep PBKDF2 cost low for the Workers Free per-request CPU budget.
 const ITERATIONS = 10_000;
 const SESSION_TTL = 8 * 60 * 60;
 const encoder = new TextEncoder();
